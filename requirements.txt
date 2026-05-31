@@ -3,9 +3,8 @@ uvicorn
 python-dotenv
 pydantic
 pydantic-settings
-ultralytics
-opencv-python-headless
-numpy
 python-multipart
 httpx
 sqlalchemy
+pymysql
+cryptography
