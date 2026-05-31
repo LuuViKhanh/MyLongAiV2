@@ -1,127 +1,154 @@
-# MyLongAI Backend (FastAPI - Production Template)
+# MyLongAI Backend v2
 
-## 📌 Overview
+Backend dự báo thời tiết thông minh, kết hợp dữ liệu từ **cảm biến IoT thực tế** và **API khí tượng Open-Meteo** để dự đoán khả năng mưa và đưa ra lời khuyên.
 
-Backend template được thiết kế theo tư duy **Spring Boot**, giúp:
-
-* Cấu trúc rõ ràng (Controller - Service - Config)
-* Dễ scale team
-* Dễ tích hợp AI (YOLO, Roboflow,...)
+**Production:** https://mylongaiv2.onrender.com
 
 ---
 
-## Project Structure
+## Tính năng
 
+- Lấy dữ liệu thời tiết thực từ [Open-Meteo](https://open-meteo.com/) (miễn phí, không cần API key)
+- Kết hợp dữ liệu cảm biến IoT (nhiệt độ, độ ẩm) từ thiết bị thực
+- Tính điểm nguy cơ mưa (0–100) dựa trên nhiều yếu tố
+- Đưa ra lời khuyên thực tế (mang ô, tránh nắng,...)
+- Thu thập và gán nhãn dữ liệu để train model AI sau này
+
+---
+
+## API Endpoints
+
+Base URL: `https://mylongaiv2.onrender.com`
+
+| Method | Endpoint | Mô tả |
+|--------|----------|-------|
+| GET | `/` | Health check |
+| GET | `/weather/analyze` | Phân tích thời tiết + dự đoán mưa |
+| POST | `/weather/label` | Gán nhãn thực tế (có mưa hay không) |
+| GET | `/weather/unlabeled` | Xem các record chưa gán nhãn |
+| GET | `/weather/dataset/export` | Xuất dataset để train model |
+| GET | `/docs` | Swagger UI - thử API trực tiếp |
+
+---
+
+## Chi tiết API
+
+### GET `/weather/analyze`
+
+Phân tích thời tiết tại một tọa độ.
+
+**Query params:**
+
+| Param | Type | Default | Mô tả |
+|-------|------|---------|-------|
+| `lat` | float | `10.226` | Vĩ độ |
+| `lon` | float | `106.421` | Kinh độ |
+| `save` | bool | `true` | Lưu vào DB để thu thập data |
+
+**Ví dụ:**
 ```
-app/
-│
-├── main.py                # Entry của FastAPI app (giống Application.java)
-│
-├── api/                   # Controller layer (handle request)
-│   └── routes/
-│       ├── ai_detect.py   # API AI detect
-│       └── health.py      # API check server
-│
-├── services/              # Business logic (giống Service)
-│   └── ai_service.py
-│
-├── models/                # Database models (optional)
-│
-├── schemas/               # DTO (request/response)
-│
-├── core/                  # Config (giống application.yml)
-│   └── config.py
-│
-├── dependencies/          # Dependency injection (optional)
-│
-└── utils/                 # Helper functions
-
-root/
-│
-├── run.py                 # Entry point để chạy server
-├── requirements.txt       # Dependencies
-├── .env                   # Environment variables
-├── Dockerfile             # Container config (production)
-└── .gitignore
-```
-
----
-
-# 🧠 Team Workflow (QUAN TRỌNG)
-
-## 🚧 Khi làm việc hằng ngày (DEV)
-
-👉 Mỗi thành viên:
-
-1. Pull code từ GitHub
-2. Chạy bằng `.venv`
-3. Code feature riêng (API / service)
-
-❗ **KHÔNG dùng Docker ở bước này**
-
----
-
-## 🔀 Khi làm việc nhóm
-
-Ví dụ:
-
-* Dev A làm `/ai/detect`
-* Dev B làm `/user/login`
-
-👉 Cả 2:
-
-* Dùng `.venv`
-* Không cần Docker
-
----
-
-## 🔄 Khi merge code
-
-* Merge vào `main`
-* Đảm bảo:
-
-  * Code chạy OK
-  * Update `requirements.txt` nếu có lib mới
-
-👉 Người khác chỉ cần:
-
-```
-pip install -r requirements.txt
+GET /weather/analyze?lat=10.22649869822018&lon=106.42142282084475
 ```
 
+**Response:**
+```json
+{
+  "timestamp": "2025-01-01T10:00:00",
+  "location": { "lat": 10.226, "lon": 106.421 },
+  "api_weather": {
+    "temperature_c": 32.5,
+    "humidity_percent": 78,
+    "pressure_hpa": 1010.2,
+    "wind_speed_ms": 3.2,
+    "precipitation_mm": 0.0,
+    "weather_code": 2
+  },
+  "sensor_data": {
+    "temperature_c": 33.1,
+    "humidity_percent": 82.5,
+    "has_rice_paper": null,
+    "vision_confidence": null,
+    "source": "real_sensor"
+  },
+  "prediction": {
+    "rain_score": 55.0,
+    "rain_level": "medium",
+    "rain_label": "Có thể có mưa",
+    "max_precip_probability_12h": 60,
+    "currently_raining": false
+  },
+  "advice": [
+    "🌦️ Có thể có mưa — nên chuẩn bị ô đề phòng.",
+    "💧 Độ ẩm rất cao — cảm giác oi bức, uống đủ nước."
+  ],
+  "record_id": 42
+}
+```
+
+> `source: "real_sensor"` = dữ liệu thật từ IoT  
+> `source: "mock_sensor"` = cảm biến offline, dùng dữ liệu giả
+
 ---
 
-## 🚀 Khi deploy (QUAN TRỌNG)
+### POST `/weather/label`
 
-### 🔥 Với project hiện tại (dùng Render)
+Gán nhãn thực tế sau khi quan sát (dùng để thu thập training data).
 
-👉 Flow đúng:
+**Body:**
+```json
+{
+  "record_id": 42,
+  "did_it_rain": true
+}
+```
 
-1. Merge code vào `main`
-2. Push lên GitHub
-3. Render tự:
-
-   * pull code
-   * cài dependencies
-   * chạy server
-
-❗ **KHÔNG cần Docker**
-
----
-
-### 🐳 Khi nào mới dùng Docker?
-
-👉 Chỉ dùng khi:
-
-* Deploy server riêng (VPS, AWS, GCP)
-* Cần kiểm soát môi trường (GPU, CUDA, YOLO nặng)
-* Muốn đảm bảo chạy giống nhau 100%
+**Response:**
+```json
+{
+  "success": true,
+  "record_id": 42,
+  "did_it_rain": true
+}
+```
 
 ---
 
-# How to Run (Local - DEV)
+### GET `/weather/dataset/export`
 
-## 1. Setup (chỉ chạy lần đầu)
+Xuất toàn bộ dataset đã gán nhãn.
+
+**Response:**
+```json
+{
+  "total": 120,
+  "records": [ ... ]
+}
+```
+
+---
+
+## Logic dự đoán mưa
+
+Điểm nguy cơ mưa (0–100) được tính từ:
+
+| Yếu tố | Điểm tối đa |
+|--------|-------------|
+| Xác suất mưa 12h tới (Open-Meteo) | 50 |
+| Độ ẩm cảm biến IoT > 60% | 30 |
+| Hiện đang có mưa | 10 |
+| Mã thời tiết WMO (mưa/dông) | 5 |
+| Độ ẩm khí tượng > 85% | 5 |
+| Gió mạnh > 5 m/s | 5 |
+
+| Điểm | Mức độ | Nhãn |
+|------|--------|------|
+| ≥ 70 | `high` | Khả năng mưa cao |
+| 40–69 | `medium` | Có thể có mưa |
+| < 40 | `low` | Ít khả năng mưa |
+
+---
+
+## Cài đặt & Chạy local
 
 ```bash
 python -m venv .venv
@@ -129,143 +156,43 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
----
+Tạo file `.env`:
+```
+MYSQL_URL=mysql+pymysql://<user>:<password>@<host>:<port>/<database>
+```
 
-## 2. Run project (mỗi lần làm việc)
-
+Chạy server:
 ```bash
-.venv\Scripts\activate
 python run.py
 ```
 
+Truy cập: http://localhost:8000/docs
+
 ---
 
-## 3. Khi thêm thư viện mới
+## Cấu trúc project
 
-```bash
-pip install <package-name>
-pip freeze > requirements.txt
+```
+app/
+├── api/routes/
+│   ├── health.py       # GET /
+│   └── weather.py      # GET|POST /weather/*
+├── services/
+│   ├── weather_service.py    # Logic phân tích + dự đoán
+│   └── weather_collector.py  # Lưu DB, gán nhãn, export
+├── models/
+│   └── weather_record.py     # SQLAlchemy model
+├── core/
+│   └── config.py       # Cấu hình từ .env
+└── main.py
+run.py                  # Entry point
 ```
 
 ---
 
-## API Docs
+## Tech Stack
 
-Sau khi chạy:
-
-```
-http://localhost:8000/docs
-```
-
----
-
-## Architecture Flow
-
-```
-Client → API (routes) → Service → Response
-```
-
----
-
-# 🐳 Docker (Production / Advanced)
-
-## 🧠 Docker là gì?
-
-👉 Docker = đóng gói project thành “một môi trường chạy hoàn chỉnh”
-
-* Có Python
-* Có thư viện
-* Có code
-
-👉 Chạy ở đâu cũng giống nhau
-
----
-
-## ❗ Khi nào dùng Docker?
-
-✔ Khi:
-
-* Deploy production thật
-* Dùng AI nặng (YOLO, GPU)
-* Cần môi trường chuẩn
-
-❌ Không dùng khi:
-
-* Đang code
-* Đang test API
-* Làm việc nhóm hằng ngày
-
----
-
-## Dockerfile
-
-```dockerfile
-FROM python:3.10
-WORKDIR /app
-
-COPY . .
-RUN pip install -r requirements.txt
-
-CMD ["python", "run.py"]
-```
-
----
-
-## Cách chạy bằng Docker
-
-### 1. Build image
-
-```bash
-docker build -t mylongai-backend .
-```
-
----
-
-### 2. Run container
-
-```bash
-docker run -p 8000:8000 mylongai-backend
-```
-
----
-
-👉 Truy cập:
-
-```
-http://localhost:8000/docs
-```
-
----
-
-# 📌 Tóm tắt cực quan trọng
-
-| Giai đoạn             | Dùng gì            |
-| --------------------- | ------------------ |
-| Dev hằng ngày         | `.venv`            |
-| Làm việc nhóm         | `.venv`            |
-| Merge code            | `.venv`            |
-| Deploy Render         | ❌ Không cần Docker |
-| Deploy production xịn | ✅ Docker           |
-
----
-
-## Notes
-
-* Không commit:
-
-  * .venv/
-  * **pycache**/
-  * .env
-
-* Luôn tách:
-
-  * Controller (routes)
-  * Business logic (services)
-
-* Chỉ cần tạo `.venv` **1 lần duy nhất**
-
-* Luôn activate trước khi chạy server
-
-* `requirements.txt` là danh sách thư viện để team đồng bộ môi trường
-
----
+- **FastAPI** - Web framework
+- **Open-Meteo API** - Dữ liệu khí tượng (miễn phí)
+- **SQLite / MySQL** - Lưu trữ dữ liệu thu thập
+- **Render** - Hosting production
