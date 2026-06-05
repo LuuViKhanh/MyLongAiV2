@@ -1,10 +1,13 @@
 import asyncio
 import httpx
 import random
-from datetime import datetime
+from datetime import datetime, timedelta
 
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
 SENSOR_API_URL = "https://mylongai-backend-sensors.onrender.com/sensor/latest"
+
+_meteo_cache: dict = {}  # key: (lat, lon) -> {"data": ..., "expires": datetime}
+CACHE_TTL_MINUTES = 10
 
 # ==============================
 # SENSOR DATA (thật + fallback mock)
@@ -43,6 +46,11 @@ async def get_sensor_data() -> dict:
 # FETCH OPEN-METEO
 # ==============================
 async def fetch_open_meteo(lat: float, lon: float) -> dict:
+    key = (round(lat, 3), round(lon, 3))
+    cached = _meteo_cache.get(key)
+    if cached and datetime.now() < cached["expires"]:
+        return cached["data"]
+
     params = {
         "latitude": lat,
         "longitude": lon,
@@ -61,7 +69,9 @@ async def fetch_open_meteo(lat: float, lon: float) -> dict:
     async with httpx.AsyncClient(timeout=10) as client:
         resp = await client.get(OPEN_METEO_URL, params=params)
         resp.raise_for_status()
-        return resp.json()
+        data = resp.json()
+    _meteo_cache[key] = {"data": data, "expires": datetime.now() + timedelta(minutes=CACHE_TTL_MINUTES)}
+    return data
 
 
 # ==============================
