@@ -1,6 +1,7 @@
 import asyncio
 import httpx
 import random
+import time
 from datetime import datetime, timedelta
 
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
@@ -66,12 +67,25 @@ async def fetch_open_meteo(lat: float, lon: float) -> dict:
         "forecast_days": 1,
         "timezone": "Asia/Ho_Chi_Minh"
     }
-    async with httpx.AsyncClient(timeout=10) as client:
-        resp = await client.get(OPEN_METEO_URL, params=params)
-        resp.raise_for_status()
-        data = resp.json()
-    _meteo_cache[key] = {"data": data, "expires": datetime.now() + timedelta(minutes=CACHE_TTL_MINUTES)}
-    return data
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(OPEN_METEO_URL, params=params)
+            resp.raise_for_status()
+            data = resp.json()
+        _meteo_cache[key] = {"data": data, "expires": datetime.now() + timedelta(minutes=CACHE_TTL_MINUTES)}
+        return data
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code == 429:
+            if cached:
+                return cached["data"]  # dùng cache cũ dù đã hết hạn
+            await asyncio.sleep(5)  # đợi 5s rồi thử lại 1 lần
+            async with httpx.AsyncClient(timeout=10) as client:
+                resp = await client.get(OPEN_METEO_URL, params=params)
+                resp.raise_for_status()
+                data = resp.json()
+            _meteo_cache[key] = {"data": data, "expires": datetime.now() + timedelta(minutes=CACHE_TTL_MINUTES)}
+            return data
+        raise
 
 
 # ==============================
