@@ -1,8 +1,8 @@
 import asyncio
 import httpx
 import random
-import time
 from datetime import datetime, timedelta
+from fastapi import HTTPException
 
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
 SENSOR_API_URL = "https://mylongai-backend-sensors.onrender.com/sensor/latest"
@@ -77,8 +77,8 @@ async def fetch_open_meteo(lat: float, lon: float) -> dict:
     except httpx.HTTPStatusError as e:
         if e.response.status_code == 429:
             if cached:
-                return cached["data"]  # dùng cache cũ dù đã hết hạn
-            await asyncio.sleep(5)  # đợi 5s rồi thử lại 1 lần
+                return cached["data"]
+            await asyncio.sleep(5)
             async with httpx.AsyncClient(timeout=10) as client:
                 resp = await client.get(OPEN_METEO_URL, params=params)
                 resp.raise_for_status()
@@ -86,6 +86,10 @@ async def fetch_open_meteo(lat: float, lon: float) -> dict:
             _meteo_cache[key] = {"data": data, "expires": datetime.now() + timedelta(minutes=CACHE_TTL_MINUTES)}
             return data
         raise
+    except (httpx.ConnectError, httpx.TimeoutException, httpx.RequestError):
+        if cached:
+            return cached["data"]  # dùng cache cũ dù hết hạn
+        raise HTTPException(status_code=503, detail="Không thể kết nối Open-Meteo API. Vui lòng thử lại sau.")
 
 
 # ==============================
