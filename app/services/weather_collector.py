@@ -35,6 +35,24 @@ def save_weather_record(analysis: dict) -> int:
         db.close()
 
 
+def label_records_bulk(labels: list[dict]) -> dict:
+    """Gán nhãn hàng loạt. labels = [{record_id, did_it_rain}, ...]"""
+    db = SessionLocal()
+    updated, not_found = 0, []
+    try:
+        for item in labels:
+            record = db.query(WeatherRecord).filter(WeatherRecord.id == item["record_id"]).first()
+            if record:
+                record.did_it_rain = item["did_it_rain"]
+                updated += 1
+            else:
+                not_found.append(item["record_id"])
+        db.commit()
+        return {"updated": updated, "not_found": not_found}
+    finally:
+        db.close()
+
+
 def label_record(record_id: int, did_it_rain: bool) -> bool:
     """Cập nhật nhãn thực tế cho một record"""
     db = SessionLocal()

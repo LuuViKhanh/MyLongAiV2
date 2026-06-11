@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Query
 from pydantic import BaseModel
 from app.services.weather_service import get_weather_analysis
-from app.services.weather_collector import save_weather_record, label_record, get_unlabeled, export_labeled_dataset
+from app.services.weather_collector import save_weather_record, label_record, label_records_bulk, get_unlabeled, export_labeled_dataset
 
 router = APIRouter()
 
@@ -28,6 +28,16 @@ def label_weather(body: LabelRequest):
     """Gán nhãn thực tế: có mưa hay không sau khi dự đoán"""
     success = label_record(body.record_id, body.did_it_rain)
     return {"success": success, "record_id": body.record_id, "did_it_rain": body.did_it_rain}
+
+
+class BulkLabelRequest(BaseModel):
+    labels: list[LabelRequest]
+
+@router.post("/label/bulk")
+def label_weather_bulk(body: BulkLabelRequest):
+    """Gán nhãn hàng loạt"""
+    result = label_records_bulk([{"record_id": l.record_id, "did_it_rain": l.did_it_rain} for l in body.labels])
+    return result
 
 
 @router.get("/unlabeled")
