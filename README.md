@@ -11,7 +11,7 @@ Backend dự báo thời tiết thông minh, kết hợp dữ liệu từ **cả
 - Lấy dữ liệu thời tiết thực từ [Open-Meteo](https://open-meteo.com/) (miễn phí, không cần API key)
 - Kết hợp dữ liệu cảm biến IoT (nhiệt độ, độ ẩm) từ thiết bị thực
 - Tính điểm nguy cơ mưa (0–100) dựa trên nhiều yếu tố
-- Đưa ra lời khuyên thực tế (mang ô, tránh nắng,...)
+- Đưa ra lời khuyên thực tế cho việc phơi/sản xuất bánh tráng (nên phơi, không nên phơi, nguy cơ mốc...)
 - Thu thập và gán nhãn dữ liệu để train model AI sau này
 
 ---
@@ -78,8 +78,8 @@ GET /weather/analyze?lat=10.22649869822018&lon=106.42142282084475
     "currently_raining": false
   },
   "advice": [
-    "🌦️ Có thể có mưa — nên chuẩn bị ô đề phòng.",
-    "💧 Độ ẩm rất cao — cảm giác oi bức, uống đủ nước."
+    "🌦️ Có thể có mưa — không nên phơi bánh tráng lúc này.",
+    "💧 Độ ẩm rất cao — bánh tráng khó khô, dễ bị mốc nếu phơi."
   ],
   "record_id": 42
 }

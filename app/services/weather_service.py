@@ -152,19 +152,21 @@ def generate_advice(prediction: dict, sensor: dict) -> list[str]:
     temp = sensor["temperature_c"]
 
     if level == "high":
-        advice.append("🌧️ Khả năng mưa cao — nên mang theo ô hoặc áo mưa.")
-        advice.append("🚗 Hạn chế di chuyển nếu không cần thiết.")
+        advice.append("🌧️ Khả năng mưa cao — không nên phơi bánh tráng, thu bánh vào ngay nếu đang phơi.")
+        advice.append("⛔ Tạm dừng sản xuất mẻ mới cho đến khi thời tiết ổn định.")
     elif level == "medium":
-        advice.append("🌦️ Có thể có mưa — nên chuẩn bị ô đề phòng.")
+        advice.append("🌦️ Có thể có mưa — không nên phơi bánh tráng lúc này.")
     else:
-        advice.append("☀️ Thời tiết ổn định — ít khả năng mưa.")
+        advice.append("☀️ Thời tiết ổn định — thuận lợi để phơi bánh tráng.")
 
     if humidity > 85:
-        advice.append("💧 Độ ẩm rất cao — cảm giác oi bức, uống đủ nước.")
+        advice.append("💧 Độ ẩm rất cao — bánh tráng khó khô, dễ bị mốc nếu phơi.")
+    elif humidity > 70:
+        advice.append("🌫️ Độ ẩm cao — bánh tráng khô chậm, cần theo dõi thêm.")
     if temp > 35:
-        advice.append("🌡️ Nhiệt độ cao — tránh ra ngoài lúc 11h-15h.")
+        advice.append("🌡️ Nhiệt độ cao — điều kiện phơi tốt, bánh tráng mau khô.")
     if prediction["currently_raining"]:
-        advice.append("☔ Hiện đang có mưa tại khu vực.")
+        advice.append("☔ Hiện đang có mưa — thu bánh vào ngay, không phơi thêm.")
 
     return advice
 
