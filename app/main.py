@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer
-from app.api.routes import health, weather, auth, camera, sensor, detection, prediction, notification, dashboard
+from app.api.routes import health, weather, auth, camera, sensor, detection, prediction, notification, dashboard, users, subscriptions, iot
 
 app = FastAPI(
     title="MyLongAI Backend",
@@ -36,6 +36,9 @@ app.include_router(detection.router, prefix="/detection", tags=["Detection"])
 app.include_router(prediction.router, prefix="/prediction", tags=["Prediction"])
 app.include_router(notification.router, prefix="/notification", tags=["Notification"])
 app.include_router(dashboard.router, prefix="/dashboard", tags=["Dashboard"])
+app.include_router(users.router, prefix="/users", tags=["User Management (Admin)"])
+app.include_router(subscriptions.router, prefix="/subscriptions", tags=["Revenue (Admin)"])
+app.include_router(iot.router, prefix="/iot", tags=["IoT & AI Internal"])
 @app.get("/")
 def root():
     return {"status": "ok"}
