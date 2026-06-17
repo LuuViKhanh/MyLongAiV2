@@ -4,6 +4,7 @@ class Settings(BaseSettings):
     APP_NAME: str = "MyLongAI"
     DEBUG: bool = True
     MYSQL_URL: str = "mysql+pymysql://root:password@localhost:3306/weather_db"
+    DATABASE_URL: str = ""
 
     class Config:
         env_file = ".env"
