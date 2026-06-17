@@ -31,7 +31,7 @@ def register(body: RegisterRequest, db: Session = Depends(get_db)):
 
     user_id = str(uuid.uuid4())
     db.execute(
-        text("INSERT INTO public.users (id, full_name, email, password_hash) VALUES (:id, :full_name, :email, :password_hash)"),
+        text("INSERT INTO public.users (id, full_name, email, password_hash, role) VALUES (:id, :full_name, :email, :password_hash, 'customer')"),
         {"id": user_id, "full_name": body.name, "email": body.email, "password_hash": hash_password(body.password)}
     )
     db.commit()
@@ -41,22 +41,22 @@ def register(body: RegisterRequest, db: Session = Depends(get_db)):
 @router.post("/login")
 def login(body: LoginRequest, db: Session = Depends(get_db)):
     user = db.execute(
-        text("SELECT id, email, password_hash, full_name FROM public.users WHERE email = :email"),
+        text("SELECT id, email, password_hash, full_name, role FROM public.users WHERE email = :email"),
         {"email": body.email}
     ).fetchone()
     if not user or not verify_password(body.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Email hoặc mật khẩu không đúng")
 
-    token = create_token(str(user.id), user.email)
-    return {"access_token": token, "token_type": "bearer", "user_id": str(user.id), "name": user.full_name}
+    token = create_token(str(user.id), user.email, user.role)
+    return {"access_token": token, "token_type": "bearer", "user_id": str(user.id), "name": user.full_name, "role": user.role}
 
 
 @router.get("/profile")
 def profile(current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     user = db.execute(
-        text("SELECT id, full_name, email FROM public.users WHERE id = :id"),
+        text("SELECT id, full_name, email, role FROM public.users WHERE id = :id"),
         {"id": current_user["sub"]}
     ).fetchone()
     if not user:
         raise HTTPException(status_code=404, detail="Không tìm thấy user")
-    return {"id": str(user.id), "name": user.full_name, "email": user.email}
+    return {"id": str(user.id), "name": user.full_name, "email": user.email, "role": user.role}
