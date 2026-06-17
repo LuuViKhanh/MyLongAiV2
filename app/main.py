@@ -1,15 +1,22 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer
 from app.api.routes import health, weather, auth, camera, sensor, detection, prediction, notification, dashboard
 
 app = FastAPI(
     title="MyLongAI Backend",
     description="""
     Hệ thống AI Vision cho làng nghề MyLongAI
-    
+
     Sử dụng YOLO để phân tích chất lượng sản phẩm.
+
+    **Hướng dẫn dùng Swagger:**
+    1. Gọi `POST /auth/login` lấy `access_token`
+    2. Click nút **Authorize** 🔒 góc trên phải
+    3. Nhập `Bearer <access_token>` rồi click Authorize
     """,
-    version="1.0.0"
+    version="1.0.0",
+    swagger_ui_parameters={"persistAuthorization": True}
 )
 
 app.add_middleware(
