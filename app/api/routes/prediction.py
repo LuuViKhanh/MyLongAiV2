@@ -28,7 +28,7 @@ def post_prediction(body: PredictionRequest, db: Session = Depends(get_db)):
 @router.get("/latest/{camera_id}")
 def get_latest(camera_id: str, db: Session = Depends(get_db)):
     row = db.execute(
-        text("SELECT * FROM drying_predictions WHERE camera_id = :camera_id ORDER BY predicted_at DESC LIMIT 1"),
+        text("SELECT * FROM drying_predictions WHERE camera_id = :camera_id ORDER BY created_at DESC LIMIT 1"),
         {"camera_id": camera_id}
     ).fetchone()
     if not row:
