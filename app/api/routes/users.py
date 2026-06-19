@@ -52,6 +52,13 @@ def update_user(id: str, body: UpdateUserRequest, current_user: dict = Depends(r
 def delete_user(id: str, current_user: dict = Depends(require_admin), db: Session = Depends(get_db)):
     if id == current_user["sub"]:
         raise HTTPException(status_code=400, detail="Không thể tự xóa chính mình")
+    # Xóa các bảng liên quan trước (cascade thủ công)
+    camera_ids = [r[0] for r in db.execute(text("SELECT id FROM public.cameras WHERE user_id = :id"), {"id": id}).fetchall()]
+    for cam_id in camera_ids:
+        db.execute(text("DELETE FROM public.detections WHERE camera_id = :cam_id"), {"cam_id": cam_id})
+        db.execute(text("DELETE FROM public.drying_predictions WHERE camera_id = :cam_id"), {"cam_id": cam_id})
+    db.execute(text("DELETE FROM public.cameras WHERE user_id = :id"), {"id": id})
+    db.execute(text("DELETE FROM public.subscriptions WHERE user_id = :id"), {"id": id})
     result = db.execute(
         text("DELETE FROM public.users WHERE id = :id AND role != 'admin'"),
         {"id": id}
