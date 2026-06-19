@@ -57,6 +57,7 @@ def delete_user(id: str, current_user: dict = Depends(require_admin), db: Sessio
     for cam_id in camera_ids:
         db.execute(text("DELETE FROM public.detections WHERE camera_id = :cam_id"), {"cam_id": cam_id})
         db.execute(text("DELETE FROM public.drying_predictions WHERE camera_id = :cam_id"), {"cam_id": cam_id})
+        db.execute(text("DELETE FROM public.sensor_readings WHERE camera_id = :cam_id"), {"cam_id": cam_id})
     db.execute(text("DELETE FROM public.cameras WHERE user_id = :id"), {"id": id})
     db.execute(text("DELETE FROM public.subscriptions WHERE user_id = :id"), {"id": id})
     result = db.execute(
