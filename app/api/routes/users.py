@@ -1,8 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+from typing import Optional
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.services.auth_service import require_admin
+
+
+class UpdateUserRequest(BaseModel):
+    full_name: Optional[str] = None
+    email: Optional[str] = None
+    role: Optional[str] = None
 
 router = APIRouter()
 
@@ -24,6 +32,34 @@ def get_user(id: str, current_user: dict = Depends(require_admin), db: Session =
     if not row:
         raise HTTPException(status_code=404, detail="User không tồn tại")
     return dict(row._mapping)
+
+
+@router.put("/{id}")
+def update_user(id: str, body: UpdateUserRequest, current_user: dict = Depends(require_admin), db: Session = Depends(get_db)):
+    fields = {k: v for k, v in body.model_dump().items() if v is not None}
+    if not fields:
+        raise HTTPException(status_code=400, detail="Không có dữ liệu cập nhật")
+    set_clause = ", ".join(f"{k} = :{k}" for k in fields)
+    fields["id"] = id
+    result = db.execute(text(f"UPDATE public.users SET {set_clause} WHERE id = :id"), fields)
+    db.commit()
+    if result.rowcount == 0:
+        raise HTTPException(status_code=404, detail="User không tồn tại")
+    return {"success": True, "user_id": id}
+
+
+@router.delete("/{id}")
+def delete_user(id: str, current_user: dict = Depends(require_admin), db: Session = Depends(get_db)):
+    if id == current_user["id"]:
+        raise HTTPException(status_code=400, detail="Không thể tự xóa chính mình")
+    result = db.execute(
+        text("DELETE FROM public.users WHERE id = :id AND role != 'admin'"),
+        {"id": id}
+    )
+    db.commit()
+    if result.rowcount == 0:
+        raise HTTPException(status_code=404, detail="User không tồn tại hoặc không thể xóa admin")
+    return {"success": True, "user_id": id}
 
 
 @router.patch("/{id}/disable")
