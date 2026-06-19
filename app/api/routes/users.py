@@ -50,7 +50,7 @@ def update_user(id: str, body: UpdateUserRequest, current_user: dict = Depends(r
 
 @router.delete("/{id}")
 def delete_user(id: str, current_user: dict = Depends(require_admin), db: Session = Depends(get_db)):
-    if id == current_user["id"]:
+    if id == current_user["sub"]:
         raise HTTPException(status_code=400, detail="Không thể tự xóa chính mình")
     result = db.execute(
         text("DELETE FROM public.users WHERE id = :id AND role != 'admin'"),
