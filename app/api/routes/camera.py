@@ -31,7 +31,7 @@ def list_cameras(current_user: dict = Depends(get_current_user), db: Session = D
         text("SELECT id, camera_name, location, created_at FROM cameras WHERE user_id = :user_id"),
         {"user_id": current_user["sub"]}
     ).fetchall()
-    return [{"id": str(r.id), "name": r.camera_name, "location": r.location, "created_at": str(r.created_at)} for r in rows]
+    return [{"id": str(r.id), "name": r.camera_name, "location": r.location, "user_id": str(r.user_id), "created_at": str(r.created_at)} for r in rows]
 
 
 @router.get("/{id}")
@@ -42,7 +42,7 @@ def get_camera(id: str, current_user: dict = Depends(get_current_user), db: Sess
     ).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Camera không tồn tại")
-    return {"id": str(row.id), "name": row.camera_name, "location": row.location, "created_at": str(row.created_at)}
+    return {"id": str(row.id), "name": row.camera_name, "location": row.location, "user_id": str(row.user_id), "created_at": str(row.created_at)}
 
 
 @router.put("/{id}")
