@@ -133,12 +133,14 @@ def predict_rain(meteo: dict, sensor: dict) -> dict:
         level = "low"
         rain_label = "Ít khả năng mưa"
 
+    currently_raining = current_precip > 0 or weather_code in range(51, 100)
+
     return {
         "rain_score": score,
-        "rain_level": level,
-        "rain_label": rain_label,
+        "rain_level": "high" if currently_raining else level,
+        "rain_label": "Đang có mưa" if currently_raining else rain_label,
         "max_precip_probability_12h": max_precip_prob,
-        "currently_raining": current_precip > 0
+        "currently_raining": currently_raining
     }
 
 
@@ -151,7 +153,9 @@ def generate_advice(prediction: dict, sensor: dict) -> list[str]:
     humidity = sensor["humidity_percent"]
     temp = sensor["temperature_c"]
 
-    if level == "high":
+    if prediction["currently_raining"]:
+        advice.append("☔ Hiện đang có mưa — thu bánh vào ngay, không phơi thêm.")
+    elif level == "high":
         advice.append("🌧️ Khả năng mưa cao — không nên phơi bánh tráng, thu bánh vào ngay nếu đang phơi.")
         advice.append("⛔ Tạm dừng sản xuất mẻ mới cho đến khi thời tiết ổn định.")
     elif level == "medium":
@@ -163,10 +167,8 @@ def generate_advice(prediction: dict, sensor: dict) -> list[str]:
         advice.append("💧 Độ ẩm rất cao — bánh tráng khó khô, dễ bị mốc nếu phơi.")
     elif humidity > 70:
         advice.append("🌫️ Độ ẩm cao — bánh tráng khô chậm, cần theo dõi thêm.")
-    if temp > 35:
+    if temp > 35 and not prediction["currently_raining"]:
         advice.append("🌡️ Nhiệt độ cao — điều kiện phơi tốt, bánh tráng mau khô.")
-    if prediction["currently_raining"]:
-        advice.append("☔ Hiện đang có mưa — thu bánh vào ngay, không phơi thêm.")
 
     return advice
 
