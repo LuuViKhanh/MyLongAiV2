@@ -1,5 +1,5 @@
-from sqlalchemy import Column, Integer, Float, Boolean, String, DateTime, create_engine
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy import Column, Integer, Float, Boolean, String, DateTime
+from sqlalchemy.orm import declarative_base
 from datetime import datetime
 
 Base = declarative_base()
@@ -34,10 +34,7 @@ class WeatherRecord(Base):
     did_it_rain = Column(Boolean, nullable=True, default=None)
 
 
-from app.core.config import settings
-
-engine = create_engine(settings.MYSQL_URL)
-SessionLocal = sessionmaker(bind=engine)
+from app.core.weather_db import engine, SessionLocal
 
 def create_tables():
     Base.metadata.create_all(bind=engine)
