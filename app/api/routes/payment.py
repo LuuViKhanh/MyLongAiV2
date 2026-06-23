@@ -8,10 +8,9 @@ import uuid, hmac, hashlib, os, random, string
 router = APIRouter()
 
 SEPAY_SECRET = os.getenv("SEPAY_SECRET", "")
-BANK_ACCOUNT = os.getenv("BANK_ACCOUNT", "")
-BANK_NAME = os.getenv("BANK_NAME", "")
-ACCOUNT_NAME = os.getenv("ACCOUNT_NAME", "")
 PREMIUM_AMOUNT = 99000
+BIDV_ACCOUNT = "8830175515"
+ACCOUNT_NAME = "LUU%20VI%20KHANH"
 
 
 def generate_order_code() -> str:
@@ -53,11 +52,11 @@ def create_order(current_user: dict = Depends(get_current_user), db: Session = D
     return {
         "order_code": order_code,
         "amount": PREMIUM_AMOUNT,
-        "bank_account": BANK_ACCOUNT,
-        "bank_name": BANK_NAME,
-        "account_name": ACCOUNT_NAME,
+        "bank_account": BIDV_ACCOUNT,
+        "bank_name": "BIDV",
+        "account_name": "LUU VI KHANH",
         "content": order_code,
-        "qr_url": f"https://qr.sepay.vn/img?acc={BANK_ACCOUNT}&bank={BANK_NAME}&amount={PREMIUM_AMOUNT}&des={order_code}"
+        "qr_url": f"https://img.vietqr.io/image/BIDV-{BIDV_ACCOUNT}-compact2.png?amount={PREMIUM_AMOUNT}&addInfo={order_code}&accountName={ACCOUNT_NAME}"
     }
 
 
