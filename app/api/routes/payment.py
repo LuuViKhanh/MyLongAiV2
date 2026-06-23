@@ -8,7 +8,7 @@ import uuid, hmac, hashlib, os, random, string
 router = APIRouter()
 
 SEPAY_SECRET = os.getenv("SEPAY_SECRET", "")
-PREMIUM_AMOUNT = 99000
+PREMIUM_AMOUNT = 10000
 BIDV_ACCOUNT = "8830175515"
 ACCOUNT_NAME = "LUU%20VI%20KHANH"
 
