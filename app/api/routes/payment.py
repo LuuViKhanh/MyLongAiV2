@@ -21,8 +21,14 @@ def generate_order_code() -> str:
 def verify_sepay_signature(payload: bytes, signature: str) -> bool:
     if not SEPAY_SECRET or not signature:
         return True
-    expected = hmac.new(SEPAY_SECRET.encode(), payload, hashlib.sha256).hexdigest()
-    return hmac.compare_digest(expected, signature)
+    timestamp = ""
+    # payload đã là bytes, cần timestamp từ header — xử lý trong route
+    return True
+
+
+def compute_signature(secret: str, timestamp: str, payload: bytes) -> str:
+    message = f"{timestamp}.{payload.decode()}".encode()
+    return "sha256=" + hmac.new(secret.encode(), message, hashlib.sha256).hexdigest()
 
 
 @router.post("/create-order")
@@ -64,9 +70,12 @@ def create_order(current_user: dict = Depends(get_current_user), db: Session = D
 async def sepay_webhook(request: Request, db: Session = Depends(get_db)):
     payload = await request.body()
     signature = request.headers.get("X-SePay-Signature", "")
+    timestamp = request.headers.get("X-SePay-Timestamp", "")
 
-    if not verify_sepay_signature(payload, signature):
-        raise HTTPException(status_code=401, detail="Invalid signature")
+    if SEPAY_SECRET and signature:
+        expected = compute_signature(SEPAY_SECRET, timestamp, payload)
+        if not hmac.compare_digest(expected, signature):
+            raise HTTPException(status_code=401, detail="Invalid signature")
 
     import json
     data = json.loads(payload)
