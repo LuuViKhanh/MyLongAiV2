@@ -69,7 +69,6 @@ async def sepay_webhook(request: Request, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Invalid signature")
 
     data = await request.json()
-    print("SEPAY WEBHOOK DATA:", data)  # debug
 
     # Lấy nội dung chuyển khoản
     content = data.get("content", "") or data.get("description", "")
