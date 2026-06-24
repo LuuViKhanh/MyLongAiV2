@@ -19,7 +19,7 @@ def generate_order_code() -> str:
 
 
 def verify_sepay_signature(payload: bytes, signature: str) -> bool:
-    if not SEPAY_SECRET:
+    if not SEPAY_SECRET or not signature:
         return True
     expected = hmac.new(SEPAY_SECRET.encode(), payload, hashlib.sha256).hexdigest()
     return hmac.compare_digest(expected, signature)
@@ -69,6 +69,7 @@ async def sepay_webhook(request: Request, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Invalid signature")
 
     data = await request.json()
+    print("SEPAY WEBHOOK DATA:", data)  # debug
 
     # Lấy nội dung chuyển khoản
     content = data.get("content", "") or data.get("description", "")
