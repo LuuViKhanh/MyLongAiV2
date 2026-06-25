@@ -41,22 +41,41 @@ def register(body: RegisterRequest, db: Session = Depends(get_db)):
 @router.post("/login")
 def login(body: LoginRequest, db: Session = Depends(get_db)):
     user = db.execute(
-        text("SELECT id, email, password_hash, full_name, role FROM public.users WHERE email = :email"),
+        text("SELECT id, email, password_hash, full_name, role, premium_expired_at FROM public.users WHERE email = :email"),
         {"email": body.email}
     ).fetchone()
     if not user or not verify_password(body.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Email hoặc mật khẩu không đúng")
 
-    token = create_token(str(user.id), user.email, user.role)
-    return {"access_token": token, "token_type": "bearer", "user_id": str(user.id), "name": user.full_name, "role": user.role}
+    # Kiểm tra hết hạn Premium
+    role = user.role
+    if role == "premium" and user.premium_expired_at:
+        from datetime import datetime, timezone
+        if datetime.now(timezone.utc) > user.premium_expired_at:
+            db.execute(text("UPDATE public.users SET role = 'customer' WHERE id = :id"), {"id": str(user.id)})
+            db.commit()
+            role = "customer"
+
+    token = create_token(str(user.id), user.email, role)
+    return {"access_token": token, "token_type": "bearer", "user_id": str(user.id), "name": user.full_name, "role": role}
 
 
 @router.get("/profile")
 def profile(current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     user = db.execute(
-        text("SELECT id, full_name, email, role FROM public.users WHERE id = :id"),
+        text("SELECT id, full_name, email, role, premium_expired_at FROM public.users WHERE id = :id"),
         {"id": current_user["sub"]}
     ).fetchone()
     if not user:
         raise HTTPException(status_code=404, detail="Không tìm thấy user")
-    return {"id": str(user.id), "name": user.full_name, "email": user.email, "role": user.role}
+
+    # Kiểm tra hết hạn Premium
+    role = user.role
+    if role == "premium" and user.premium_expired_at:
+        from datetime import datetime, timezone
+        if datetime.now(timezone.utc) > user.premium_expired_at:
+            db.execute(text("UPDATE public.users SET role = 'customer' WHERE id = :id"), {"id": str(user.id)})
+            db.commit()
+            role = "customer"
+
+    return {"id": str(user.id), "name": user.full_name, "email": user.email, "role": role, "premium_expired_at": str(user.premium_expired_at) if user.premium_expired_at else None}
