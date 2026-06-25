@@ -20,6 +20,14 @@ def is_admin(user: dict) -> bool:
 
 @router.post("")
 def create_camera(body: CameraRequest, current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    is_premium = current_user.get("role") in ("premium", "admin")
+    if not is_premium:
+        count = db.execute(
+            text("SELECT COUNT(*) FROM cameras WHERE user_id = :user_id"),
+            {"user_id": current_user["sub"]}
+        ).scalar()
+        if count >= 1:
+            raise HTTPException(status_code=403, detail="Tài khoản Free chỉ được thêm 1 camera. Nâng cấp Premium để thêm nhiều thiết bị.")
     camera_id = str(uuid.uuid4())
     db.execute(
         text("INSERT INTO cameras (id, user_id, camera_name, location) VALUES (:id, :user_id, :camera_name, :location)"),

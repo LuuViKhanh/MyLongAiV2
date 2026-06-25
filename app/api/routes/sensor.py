@@ -28,7 +28,7 @@ def get_history(camera_id: str, limit: int = 50, current_user: dict = Depends(ge
             {"camera_id": camera_id, "limit": limit}
         ).fetchall()
     else:
-        since = datetime.utcnow() - timedelta(days=7)
+        since = datetime.utcnow() - timedelta(days=2)
         rows = db.execute(
             text("SELECT * FROM sensor_readings WHERE camera_id = :camera_id AND recorded_at >= :since ORDER BY recorded_at DESC LIMIT :limit"),
             {"camera_id": camera_id, "since": since, "limit": limit}

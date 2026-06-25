@@ -39,6 +39,23 @@ def esp32_sensor(body: SensorDataRequest, db: Session = Depends(get_db)):
 
 @router.post("/detection-result")
 def ai_detection(body: DetectionResultRequest, db: Session = Depends(get_db)):
+    # Kiểm tra giới hạn 10 lần detect/ngày cho Free
+    camera = db.execute(
+        text("SELECT user_id FROM cameras WHERE id = :camera_id"),
+        {"camera_id": body.camera_id}
+    ).fetchone()
+    if camera:
+        user = db.execute(
+            text("SELECT role FROM public.users WHERE id = :id"),
+            {"id": str(camera.user_id)}
+        ).fetchone()
+        if user and user.role not in ("premium", "admin"):
+            count_today = db.execute(
+                text("SELECT COUNT(*) FROM detections WHERE camera_id = :camera_id AND DATE(detected_at) = CURRENT_DATE"),
+                {"camera_id": body.camera_id}
+            ).scalar()
+            if count_today >= 10:
+                return {"success": False, "message": "Đã đạt giới hạn 10 lần detect/ngày. Nâng cấp Premium để dùng không giới hạn."}
     db.execute(
         text("INSERT INTO detections (id, camera_id, detected_count, confidence) VALUES (:id, :camera_id, :detected_count, :confidence)"),
         {"id": str(uuid.uuid4()), "camera_id": body.camera_id, "detected_count": body.detected_count, "confidence": body.confidence}
