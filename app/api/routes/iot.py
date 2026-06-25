@@ -49,6 +49,18 @@ def ai_detection(body: DetectionResultRequest, db: Session = Depends(get_db)):
 
 @router.post("/dryness-result")
 def ai_dryness(body: DrynessResultRequest, db: Session = Depends(get_db)):
+    # Kiểm tra camera thuộc user premium không
+    camera = db.execute(
+        text("SELECT user_id FROM cameras WHERE id = :camera_id"),
+        {"camera_id": body.camera_id}
+    ).fetchone()
+    if camera:
+        user = db.execute(
+            text("SELECT role FROM public.users WHERE id = :id"),
+            {"id": str(camera.user_id)}
+        ).fetchone()
+        if user and user.role not in ("premium", "admin"):
+            return {"success": False, "message": "Camera này thuộc tài khoản Free, không hỗ trợ dự đoán"}
     db.execute(
         text("INSERT INTO drying_predictions (id, camera_id, temperature, humidity, predicted_minutes) VALUES (:id, :camera_id, :temperature, :humidity, :predicted_minutes)"),
         {"id": str(uuid.uuid4()), "camera_id": body.camera_id, "temperature": body.temperature, "humidity": body.humidity, "predicted_minutes": body.predicted_minutes}

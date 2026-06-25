@@ -46,3 +46,9 @@ def require_admin(current_user: dict = Depends(get_current_user)) -> dict:
     if current_user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Không có quyền admin")
     return current_user
+
+
+def require_premium(current_user: dict = Depends(get_current_user)) -> dict:
+    if current_user.get("role") not in ("premium", "admin"):
+        raise HTTPException(status_code=403, detail="Cần nâng cấp Premium để sử dụng tính năng này")
+    return current_user
