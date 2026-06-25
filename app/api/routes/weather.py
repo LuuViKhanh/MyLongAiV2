@@ -1,21 +1,30 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Depends
+from fastapi.security import HTTPBearer
 from pydantic import BaseModel
 from app.services.weather_service import get_weather_analysis
 from app.services.weather_collector import save_weather_record, label_record, label_records_bulk, get_unlabeled, export_labeled_dataset
+from app.services.auth_service import get_current_user
+from fastapi import HTTPException
 
 router = APIRouter()
+bearer_scheme = HTTPBearer(auto_error=False)
 
 
 @router.get("/analyze")
 async def weather_analyze(
     lat: float = Query(10.22649869822018, description="Vĩ độ"),
     lon: float = Query(106.42142282084475, description="Kinh độ"),
-    save: bool = Query(True, description="Lưu vào DB để thu thập data")
+    save: bool = Query(True, description="Lưu vào DB để thu thập data"),
+    current_user: dict = Depends(get_current_user)
 ):
     result = await get_weather_analysis(lat, lon)
     if save:
         record_id = save_weather_record(result)
-        result["record_id"] = record_id  # trả về để client dùng khi gán nhãn
+        result["record_id"] = record_id
+
+    is_premium = current_user.get("role") in ("premium", "admin")
+    if not is_premium:
+        result["advice"] = ["🔒 Nâng cấp Premium để nhận khuyến nghị phơi bánh tráng."]
     return result
 
 
