@@ -33,15 +33,7 @@ def compute_signature(secret: str, timestamp: str, payload: bytes) -> str:
 
 @router.post("/create-order")
 def create_order(current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
-    # Kiểm tra đã Premium chưa
-    user = db.execute(
-        text("SELECT role FROM public.users WHERE id = :id"),
-        {"id": current_user["sub"]}
-    ).fetchone()
-    if user and user.role == "premium":
-        raise HTTPException(status_code=400, detail="Tài khoản đã là Premium")
-
-    # Hủy các đơn pending cũ
+    # Kiểm tra đã Premium chưa — vẫn cho thanh toán để gia hạn
     db.execute(
         text("UPDATE orders SET status = 'cancelled' WHERE user_id = :user_id AND status = 'pending'"),
         {"user_id": current_user["sub"]}
