@@ -108,9 +108,14 @@ async def sepay_webhook(request: Request, db: Session = Depends(get_db)):
         {"code": order_code}
     )
 
-    # Nâng cấp user lên Premium 30 ngày
+    # Nâng cấp user lên Premium 30 ngày (cộng dồn nếu đang còn hạn)
     db.execute(
-        text("UPDATE public.users SET role = 'premium', premium_expired_at = NOW() + INTERVAL '30 days' WHERE id = :user_id"),
+        text("""
+            UPDATE public.users 
+            SET role = 'premium',
+                premium_expired_at = GREATEST(COALESCE(premium_expired_at, NOW()), NOW()) + INTERVAL '30 days'
+            WHERE id = :user_id
+        """),
         {"user_id": str(order.user_id)}
     )
     db.commit()
