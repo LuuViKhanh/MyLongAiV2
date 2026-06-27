@@ -77,22 +77,25 @@ async def sepay_webhook(request: Request, db: Session = Depends(get_db)):
 
     # Tìm mã MLAI trong nội dung
     order_code = None
-    for word in content.upper().split():
-        if word.startswith("MLAI"):
-            order_code = word
-            break
+    import re
+    match = re.search(r'MLAI\d+', content.upper())
+    if match:
+        order_code = match.group()
 
     if not order_code:
         return {"success": False, "message": "Không tìm thấy mã đơn hàng"}
 
-    # Tìm đơn hàng
+    # Tìm đơn hàng — kể cả đã paid (tránh xử lý lại)
     order = db.execute(
-        text("SELECT * FROM orders WHERE order_code = :code AND status = 'pending'"),
+        text("SELECT * FROM orders WHERE order_code = :code"),
         {"code": order_code}
     ).fetchone()
 
     if not order:
-        return {"success": False, "message": "Đơn hàng không tồn tại hoặc đã xử lý"}
+        return {"success": False, "message": "Đơn hàng không tồn tại"}
+
+    if order.status == "paid":
+        return {"success": True, "message": "Đơn hàng đã được xử lý trước đó"}
 
     # Cập nhật đơn hàng
     db.execute(
