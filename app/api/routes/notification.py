@@ -26,10 +26,10 @@ def post_notification(body: NotificationRequest, db: Session = Depends(get_db)):
     return {"success": True}
 
 
-@router.get("/{user_id}")
-def get_notifications(user_id: str, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
+@router.get("/me")
+def get_notifications(db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
     rows = db.execute(
         text("SELECT * FROM notifications WHERE user_id = :user_id ORDER BY created_at DESC"),
-        {"user_id": user_id}
+        {"user_id": current_user["sub"]}
     ).fetchall()
     return {"data": [dict(r._mapping) for r in rows]}
