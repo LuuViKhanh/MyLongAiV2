@@ -7,7 +7,8 @@ class Settings(BaseSettings):
     WEATHER_DATABASE_URL: str = ""
     GMAIL_USER: str = ""
     GMAIL_APP_PASSWORD: str = ""
-    FRONTEND_URL: str = "https://mylongai.vercel.app"
+    FRONTEND_URL: str = "https://batchguard-web.vercel.app"
+    RESEND_API_KEY: str = ""
 
     class Config:
         env_file = ".env"

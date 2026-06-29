@@ -4,29 +4,22 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.services.auth_service import hash_password
-import secrets, os, smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import secrets, os, resend
 from datetime import datetime, timedelta, timezone
 
 router = APIRouter()
 
-GMAIL_USER = os.getenv("GMAIL_USER", "")
-GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD", "")
-FRONTEND_URL = os.getenv("FRONTEND_URL", "https://mylongai.vercel.app")
+resend.api_key = os.getenv("RESEND_API_KEY", "")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://batchguard-web.vercel.app")
 
 
 def send_email(to: str, subject: str, html: str):
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = subject
-    msg["From"] = GMAIL_USER
-    msg["To"] = to
-    msg.attach(MIMEText(html, "html"))
-    with smtplib.SMTP("smtp.gmail.com", 587) as server:
-        server.ehlo()
-        server.starttls()
-        server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
-        server.sendmail(GMAIL_USER, to, msg.as_string())
+    resend.Emails.send({
+        "from": "MyLongAI <onboarding@resend.dev>",
+        "to": to,
+        "subject": subject,
+        "html": html
+    })
 
 
 class ForgotRequest(BaseModel):
