@@ -60,6 +60,9 @@ def delete_user(id: str, current_user: dict = Depends(require_admin), db: Sessio
         db.execute(text("DELETE FROM public.sensor_readings WHERE camera_id = :cam_id"), {"cam_id": cam_id})
     db.execute(text("DELETE FROM public.cameras WHERE user_id = :id"), {"id": id})
     db.execute(text("DELETE FROM public.subscriptions WHERE user_id = :id"), {"id": id})
+    db.execute(text("DELETE FROM orders WHERE user_id = :id"), {"id": id})
+    db.execute(text("DELETE FROM notifications WHERE user_id = :id"), {"id": id})
+    db.execute(text("DELETE FROM password_resets WHERE email = (SELECT email FROM public.users WHERE id = :id)"), {"id": id})
     result = db.execute(
         text("DELETE FROM public.users WHERE id = :id AND role != 'admin'"),
         {"id": id}
