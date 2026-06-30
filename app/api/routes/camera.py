@@ -86,17 +86,19 @@ def update_camera(id: str, body: CameraRequest, current_user: dict = Depends(get
 
 @router.delete("/{id}")
 def delete_camera(id: str, current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    # Kiểm tra camera tồn tại
     if is_admin(current_user):
-        result = db.execute(
-            text("DELETE FROM cameras WHERE id = :id"),
-            {"id": id}
-        )
+        row = db.execute(text("SELECT id FROM cameras WHERE id = :id"), {"id": id}).fetchone()
     else:
-        result = db.execute(
-            text("DELETE FROM cameras WHERE id = :id AND user_id = :user_id"),
-            {"id": id, "user_id": current_user["sub"]}
-        )
-    db.commit()
-    if result.rowcount == 0:
+        row = db.execute(text("SELECT id FROM cameras WHERE id = :id AND user_id = :user_id"), {"id": id, "user_id": current_user["sub"]}).fetchone()
+    if not row:
         raise HTTPException(status_code=404, detail="Camera không tồn tại")
+
+    # Xóa dữ liệu liên quan trước
+    db.execute(text("DELETE FROM detections WHERE camera_id = :id"), {"id": id})
+    db.execute(text("DELETE FROM drying_predictions WHERE camera_id = :id"), {"id": id})
+    db.execute(text("DELETE FROM sensor_readings WHERE camera_id = :id"), {"id": id})
+    db.execute(text("DELETE FROM notifications WHERE camera_id = :id"), {"id": id})
+    db.execute(text("DELETE FROM cameras WHERE id = :id"), {"id": id})
+    db.commit()
     return {"success": True}
