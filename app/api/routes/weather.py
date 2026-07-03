@@ -3,11 +3,24 @@ from fastapi.security import HTTPBearer
 from pydantic import BaseModel
 from app.services.weather_service import get_weather_analysis
 from app.services.weather_collector import save_weather_record, label_record, label_records_bulk, get_unlabeled, export_labeled_dataset
-from app.services.auth_service import get_current_user
-from fastapi import HTTPException
+from jose import jwt, JWTError
+from fastapi.security import HTTPAuthorizationCredentials
+import os
 
 router = APIRouter()
 bearer_scheme = HTTPBearer(auto_error=False)
+
+SECRET_KEY = os.getenv("SECRET_KEY", "mylongai_secret_key_2024")
+ALGORITHM = "HS256"
+
+
+def get_optional_user(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)) -> dict:
+    if not credentials:
+        return {"role": "guest"}
+    try:
+        return jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+    except JWTError:
+        return {"role": "guest"}
 
 
 @router.get("/analyze")
@@ -15,7 +28,7 @@ async def weather_analyze(
     lat: float = Query(10.22649869822018, description="Vĩ độ"),
     lon: float = Query(106.42142282084475, description="Kinh độ"),
     save: bool = Query(True, description="Lưu vào DB để thu thập data"),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_optional_user)
 ):
     result = await get_weather_analysis(lat, lon)
     if save:
