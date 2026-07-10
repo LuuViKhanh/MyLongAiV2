@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from app.core.db import get_db
-from app.services.auth_service import get_current_user
+from app.services.auth_service import get_current_user, require_admin
 import uuid, hmac, hashlib, os, random, string
 
 router = APIRouter()
@@ -116,6 +116,19 @@ async def sepay_webhook(request: Request, db: Session = Depends(get_db)):
     db.commit()
 
     return {"success": True, "message": "Nâng cấp Premium thành công"}
+
+
+@router.get("/buyers")
+def list_buyers(current_user: dict = Depends(require_admin), db: Session = Depends(get_db)):
+    rows = db.execute(text("""
+        SELECT o.order_code, o.amount, o.status, o.paid_at,
+               u.id as user_id, u.full_name, u.email, u.role, u.premium_expired_at
+        FROM orders o
+        JOIN public.users u ON u.id = o.user_id
+        WHERE o.status = 'paid'
+        ORDER BY o.paid_at DESC
+    """)).fetchall()
+    return {"total": len(rows), "data": [dict(r._mapping) for r in rows]}
 
 
 @router.get("/status")
