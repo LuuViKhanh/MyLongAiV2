@@ -9,7 +9,13 @@ import uuid
 router = APIRouter()
 
 
-class CameraRequest(BaseModel):
+class CameraCreateRequest(BaseModel):
+    name: str
+    location: str | None = None
+    user_id: str
+
+
+class CameraUpdateRequest(BaseModel):
     name: str
     location: str | None = None
 
@@ -19,19 +25,13 @@ def is_admin(user: dict) -> bool:
 
 
 @router.post("")
-def create_camera(body: CameraRequest, current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
-    is_premium = current_user.get("role") in ("premium", "admin")
-    if not is_premium:
-        count = db.execute(
-            text("SELECT COUNT(*) FROM cameras WHERE user_id = :user_id"),
-            {"user_id": current_user["sub"]}
-        ).scalar()
-        if count >= 1:
-            raise HTTPException(status_code=403, detail="Tài khoản Free chỉ được thêm 1 camera. Nâng cấp Premium để thêm nhiều thiết bị.")
+def create_camera(body: CameraCreateRequest, current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not is_admin(current_user):
+        raise HTTPException(status_code=403, detail="Chỉ admin mới có thể tạo camera")
     camera_id = str(uuid.uuid4())
     db.execute(
         text("INSERT INTO cameras (id, user_id, camera_name, location) VALUES (:id, :user_id, :camera_name, :location)"),
-        {"id": camera_id, "user_id": current_user["sub"], "camera_name": body.name, "location": body.location}
+        {"id": camera_id, "user_id": body.user_id, "camera_name": body.name, "location": body.location}
     )
     db.commit()
     return {"success": True, "camera_id": camera_id}
@@ -67,7 +67,7 @@ def get_camera(id: str, current_user: dict = Depends(get_current_user), db: Sess
 
 
 @router.put("/{id}")
-def update_camera(id: str, body: CameraRequest, current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+def update_camera(id: str, body: CameraUpdateRequest, current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     if is_admin(current_user):
         result = db.execute(
             text("UPDATE cameras SET camera_name = :camera_name, location = :location WHERE id = :id"),

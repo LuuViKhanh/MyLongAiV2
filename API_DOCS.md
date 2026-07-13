@@ -68,18 +68,18 @@ Authorization: Bearer <access_token>
 
 | Method | Endpoint | Auth | Mô tả |
 |--------|----------|------|-------|
-| POST | `/camera` | ✅ | Thêm camera mới |
+| POST | `/camera` | ✅ Admin | Tạo camera và gán cho user |
 | GET | `/camera` | ✅ | Danh sách camera |
 | GET | `/camera/{id}` | ✅ | Chi tiết camera |
-| PUT | `/camera/{id}` | ✅ | Cập nhật camera |
-| DELETE | `/camera/{id}` | ✅ | Xóa camera (cascade) |
+| PUT | `/camera/{id}` | ✅ Admin | Cập nhật camera |
+| DELETE | `/camera/{id}` | ✅ Admin | Xóa camera (cascade) |
 
-> Free: tối đa 1 camera. Admin xem được tất cả camera của mọi user.
+> Chỉ admin mới tạo được camera. Customer chỉ xem camera được gán cho mình.
 
 ### POST `/camera`
 ```json
-// Request
-{ "name": "Camera sân phơi 1", "location": "Khu A" }
+// Request (Admin only)
+{ "name": "Camera sân phơi 1", "location": "Khu A", "user_id": "uuid-cua-user" }
 
 // Response
 { "success": true, "camera_id": "uuid" }

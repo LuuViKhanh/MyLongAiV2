@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyLongAI - LiveKit Edge AI Test Viewer</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- LiveKit Client SDK via UMD CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0a0b10;
+            --bg-secondary: #141522;
+            --accent-primary: #00ff66;
+            --accent-secondary: #00e5ff;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --border-color: rgba(255, 255, 255, 0.08);
+            --border-focus: rgba(0, 255, 102, 0.4);
+            --glass-bg: rgba(20, 21, 34, 0.7);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 40px 20px;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(0, 229, 255, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(0, 255, 102, 0.05) 0%, transparent 40%);
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--text-primary) 30%, var(--accent-secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        header p {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        /* Glassmorphism Control Panel */
+        .control-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .input-group label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .input-group input {
+            background-color: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px 16px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 10px var(--border-focus);
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .btn-container {
+            display: flex;
+            align-items: flex-end;
+            gap: 12px;
+        }
+
+        button {
+            width: 100%;
+            height: 48px;
+            border: none;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-connect {
+            background: linear-gradient(135deg, #00ff66 0%, #00e5ff 100%);
+            color: #000;
+            box-shadow: 0 4px 20px rgba(0, 255, 102, 0.2);
+        }
+
+        .btn-connect:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(0, 255, 102, 0.35);
+        }
+
+        .btn-disconnect {
+            background-color: #ef4444;
+            color: var(--text-primary);
+            box-shadow: 0 4px 20px rgba(239, 68, 68, 0.2);
+            display: none;
+        }
+
+        .btn-disconnect:hover {
+            background-color: #dc2626;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(239, 68, 68, 0.35);
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        /* Stream Display Box */
+        .video-box {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            overflow: hidden;
+            position: relative;
+            aspect-ratio: 16/9;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+            transition: border-color 0.5s ease;
+        }
+
+        .video-box.live {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 30px rgba(0, 255, 102, 0.15);
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: none;
+        }
+
+        .video-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            color: var(--text-secondary);
+            transition: all 0.3s ease;
+        }
+
+        .video-placeholder svg {
+            width: 64px;
+            height: 64px;
+            fill: currentColor;
+            opacity: 0.5;
+            transition: all 0.3s ease;
+        }
+
+        .video-box.connecting .video-placeholder svg {
+            animation: pulse 1.5s infinite ease-in-out;
+            color: var(--accent-secondary);
+            opacity: 0.8;
+        }
+
+        /* Status Badge */
+        .status-badge {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            background-color: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 10;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #94a3b8;
+        }
+
+        .status-badge.live .status-dot {
+            background-color: var(--accent-primary);
+            box-shadow: 0 0 8px var(--accent-primary);
+            animation: blink 1s infinite alternate;
+        }
+
+        .status-badge.connecting .status-dot {
+            background-color: var(--accent-secondary);
+            box-shadow: 0 0 8px var(--accent-secondary);
+            animation: blink 0.5s infinite alternate;
+        }
+
+        /* Console Log Box */
+        .log-panel {
+            background-color: #030408;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.85rem;
+            color: #84cc16;
+            max-height: 180px;
+            overflow-y: auto;
+            box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.8);
+        }
+
+        .log-entry {
+            margin-bottom: 6px;
+            line-height: 1.4;
+            display: flex;
+            gap: 8px;
+        }
+
+        .log-time {
+            color: #4b5563;
+            flex-shrink: 0;
+        }
+
+        .log-text {
+            word-break: break-all;
+        }
+
+        .log-error {
+            color: #ef4444;
+        }
+
+        .log-info {
+            color: #38bdf8;
+        }
+
+        /* Animations */
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.9; }
+        }
+
+        @keyframes blink {
+            from { opacity: 0.4; }
+            to { opacity: 1; }
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>MyLongAI LiveKit Stream</h1>
+        <p>Giao diện kiểm thử luồng video thời gian thực từ Edge AI Laptop</p>
+    </header>
+
+    <!-- Control Config Box -->
+    <div class="control-panel">
+        <div class="input-group">
+            <label for="server-url">Cloud Server URL</label>
+            <input type="text" id="server-url" value="https://camera-relay-v5.onrender.com" placeholder="https://camera-relay-v5.onrender.com">
+        </div>
+        <div class="input-group">
+            <label for="camera-id">Camera ID (Identity)</label>
+            <input type="text" id="camera-id" value="workshop-laptop-camera" placeholder="workshop-laptop-camera">
+        </div>
+        <div class="input-group">
+            <label for="room-name">LiveKit Room Name</label>
+            <input type="text" id="room-name" value="mylongai" placeholder="mylongai">
+        </div>
+        <div class="btn-container">
+            <button id="btn-connect" class="btn-connect" onclick="connectStream()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                Xem Luồng
+            </button>
+            <button id="btn-disconnect" class="btn-disconnect" onclick="disconnectStream()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect></svg>
+                Ngắt kết nối
+            </button>
+        </div>
+    </div>
+
+    <!-- Video Display Box -->
+    <div class="video-box" id="video-wrapper">
+        <div class="status-badge" id="status-badge">
+            <div class="status-dot"></div>
+            <span id="status-text">OFFLINE</span>
+        </div>
+
+        <video id="camera-video" autoplay muted playsinline controls></video>
+
+        <div class="video-placeholder" id="placeholder">
+            <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                <circle cx="12" cy="13" r="4"></circle>
+            </svg>
+            <p id="placeholder-text">Nhấn nút "Xem Luồng" để bắt đầu thiết lập kết nối</p>
+        </div>
+    </div>
+
+    <!-- Logger Terminal -->
+    <div class="log-panel" id="log-container">
+        <div class="log-entry">
+            <span class="log-time">[00:00:00]</span>
+            <span class="log-text log-info">Hệ thống sẵn sàng. Vui lòng bật laptop/main.py và server.py trước khi kết nối.</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    let activeRoom = null;
+
+    function addLog(message, type = 'info') {
+        const container = document.getElementById('log-container');
+        const entry = document.createElement('div');
+        entry.className = 'log-entry';
+
+        const now = new Date();
+        const timeStr = `[${now.toTimeString().split(' ')[0]}]`;
+
+        const timeSpan = document.createElement('span');
+        timeSpan.className = 'log-time';
+        timeSpan.innerText = timeStr;
+
+        const textSpan = document.createElement('span');
+        textSpan.className = `log-text log-${type}`;
+        textSpan.innerText = message;
+
+        entry.appendChild(timeSpan);
+        entry.appendChild(textSpan);
+        container.appendChild(entry);
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function updateUIState(state) {
+        const videoWrapper = document.getElementById('video-wrapper');
+        const statusBadge = document.getElementById('status-badge');
+        const statusText = document.getElementById('status-text');
+        const placeholderText = document.getElementById('placeholder-text');
+        const btnConnect = document.getElementById('btn-connect');
+        const btnDisconnect = document.getElementById('btn-disconnect');
+        const videoEl = document.getElementById('camera-video');
+
+        videoWrapper.className = 'video-box ' + state;
+        statusBadge.className = 'status-badge ' + state;
+
+        if (state === 'live') {
+            statusText.innerText = 'LIVE';
+            btnConnect.style.display = 'none';
+            btnDisconnect.style.display = 'flex';
+            videoEl.style.display = 'block';
+            document.getElementById('placeholder').style.display = 'none';
+        } else if (state === 'connecting') {
+            statusText.innerText = 'CONNECTING';
+            btnConnect.disabled = true;
+            btnConnect.style.opacity = '0.6';
+            placeholderText.innerText = 'Đang xử lý bắt tay và kết nối qua WebRTC...';
+            document.getElementById('placeholder').style.display = 'flex';
+            videoEl.style.display = 'none';
+        } else {
+            statusText.innerText = 'OFFLINE';
+            btnConnect.style.display = 'flex';
+            btnConnect.disabled = false;
+            btnConnect.style.opacity = '1';
+            btnDisconnect.style.display = 'none';
+            placeholderText.innerText = 'Nhấn nút "Xem Luồng" để bắt đầu thiết lập kết nối';
+            document.getElementById('placeholder').style.display = 'flex';
+            videoEl.style.display = 'none';
+        }
+    }
+
+    async function connectStream() {
+        const serverUrl = document.getElementById('server-url').value.trim();
+        const cameraId = document.getElementById('camera-id').value.trim();
+        const roomName = document.getElementById('room-name').value.trim();
+
+        if (!serverUrl || !cameraId || !roomName) {
+            addLog("❌ Lỗi: Vui lòng nhập đầy đủ URL Server, Camera ID và Tên phòng!", "error");
+            return;
+        }
+
+        updateUIState('connecting');
+        addLog(`⏱️ Bắt đầu kết nối. Đang lấy Token từ Cloud Server: ${serverUrl}...`);
+
+        try {
+            // 1. Gọi API lấy Token từ Cloud Signaling Server
+            const response = await fetch(`${serverUrl}/api/cameras/${cameraId}/token`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    identity: `web_viewer_${Math.random().toString(36).substring(7)}`,
+                    room_name: roomName,
+                    is_publisher: false
+                })
+            });
+
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(`Cloud Server trả về lỗi: ${response.status} - ${errText}`);
+            }
+
+            const { token, server_url } = await response.json();
+            addLog(`✅ Đã nhận JWT Access Token thành công.`);
+            addLog(`⚡ Đang kết nối tới LiveKit Cloud: ${server_url}...`);
+
+            // 2. Khởi tạo Room của LiveKit
+            // LivekitClient được cung cấp bởi UMD bundle
+            const { Room, RoomEvent } = LivekitClient;
+            
+            activeRoom = new Room({
+                adaptiveStream: true,
+                dynacast: true
+            });
+
+            // 3. Đăng ký sự kiện
+            activeRoom.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
+                if (track.kind === 'video') {
+                    addLog(`📹 Track video đã được đăng ký thành công từ '${participant.identity}'!`, 'info');
+                    const videoEl = document.getElementById('camera-video');
+                    track.attach(videoEl);
+                    updateUIState('live');
+                    addLog(`🎉 Live Stream bắt đầu. Trạng thái: CONNECTED.`, 'info');
+                }
+            });
+
+            activeRoom.on(RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
+                addLog(`📵 Track video bị gỡ bỏ.`, 'error');
+                track.detach(document.getElementById('camera-video'));
+                updateUIState('offline');
+            });
+
+            activeRoom.on(RoomEvent.Disconnected, () => {
+                addLog(`❌ Mất kết nối tới máy chủ LiveKit.`, 'error');
+                disconnectStream();
+            });
+
+            // 4. Thực hiện kết nối
+            await activeRoom.connect(server_url, token);
+            addLog(`✅ Đã tham gia vào phòng Room: '${roomName}'. Đang chờ video track từ laptop...`);
+
+            // Đặt giới hạn timeout chờ track
+            setTimeout(() => {
+                if (activeRoom && activeRoom.state === 'connected' && document.getElementById('camera-video').style.display === 'none') {
+                    addLog(`⚠️ Cảnh báo: Kết nối phòng thành công nhưng chưa nhận được video track. Hãy chắc chắn Laptop main.py đã khởi động và đẩy luồng!`, 'error');
+                    updateUIState('offline');
+                    disconnectStream();
+                }
+            }, 12000);
+
+        } catch (err) {
+            addLog(`❌ Lỗi kết nối: ${err.message}`, 'error');
+            updateUIState('offline');
+        }
+    }
+
+    function disconnectStream() {
+        if (activeRoom) {
+            addLog(`🔌 Đang ngắt kết nối phòng...`);
+            activeRoom.disconnect();
+            activeRoom = null;
+        }
+        updateUIState('offline');
+        addLog(`🔇 Đã ngắt kết nối hoàn toàn.`);
+    }
+</script>
+
+</body>
+</html>
