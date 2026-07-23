@@ -8,7 +8,8 @@ import uuid, hmac, hashlib, os, random, string
 router = APIRouter()
 
 SEPAY_SECRET = os.getenv("SEPAY_SECRET", "")
-PREMIUM_AMOUNT = 10000
+PREMIUM_PRICE_NORMAL = 299000
+PREMIUM_PRICE_FROM_MONTH_3 = 399000
 BIDV_ACCOUNT = "96247812005"
 ACCOUNT_NAME = "LUU%20VI%20KHANH"
 
@@ -33,7 +34,15 @@ def compute_signature(secret: str, timestamp: str, payload: bytes) -> str:
 
 @router.post("/create-order")
 def create_order(current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
-    # Kiểm tra đã Premium chưa — vẫn cho thanh toán để gia hạn
+    # Đếm số tháng đã từng thanh toán thành công
+    paid_count = db.execute(
+        text("SELECT COUNT(*) FROM orders WHERE user_id = :user_id AND status = 'paid'"),
+        {"user_id": current_user["sub"]}
+    ).scalar()
+
+    amount = PREMIUM_PRICE_FROM_MONTH_3 if paid_count >= 2 else PREMIUM_PRICE_NORMAL
+
+    # Hủy đơn pending cũ
     db.execute(
         text("UPDATE orders SET status = 'cancelled' WHERE user_id = :user_id AND status = 'pending'"),
         {"user_id": current_user["sub"]}
@@ -43,18 +52,19 @@ def create_order(current_user: dict = Depends(get_current_user), db: Session = D
     order_code = generate_order_code()
     db.execute(
         text("INSERT INTO orders (id, user_id, order_code, amount, status) VALUES (:id, :user_id, :order_code, :amount, 'pending')"),
-        {"id": str(uuid.uuid4()), "user_id": current_user["sub"], "order_code": order_code, "amount": PREMIUM_AMOUNT}
+        {"id": str(uuid.uuid4()), "user_id": current_user["sub"], "order_code": order_code, "amount": amount}
     )
     db.commit()
 
     return {
         "order_code": order_code,
-        "amount": PREMIUM_AMOUNT,
+        "amount": amount,
+        "month_number": paid_count + 1,
         "bank_account": BIDV_ACCOUNT,
         "bank_name": "BIDV",
         "account_name": "LUU VI KHANH",
         "content": order_code,
-        "qr_url": f"https://img.vietqr.io/image/BIDV-{BIDV_ACCOUNT}-compact2.png?amount={PREMIUM_AMOUNT}&addInfo={order_code}&accountName={ACCOUNT_NAME}"
+        "qr_url": f"https://img.vietqr.io/image/BIDV-{BIDV_ACCOUNT}-compact2.png?amount={amount}&addInfo={order_code}&accountName={ACCOUNT_NAME}"
     }
 
 
