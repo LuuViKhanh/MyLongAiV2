@@ -10,15 +10,18 @@ from datetime import datetime, timedelta, timezone
 router = APIRouter()
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "https://batchguard-web.vercel.app")
-MAILERSEND_API_KEY = os.getenv("MAILERSEND_API_KEY", "")
 
 
 def send_email(to: str, subject: str, html: str):
+    api_key = os.getenv("MAILERSEND_API_KEY", "")
+    if not api_key:
+        print("[Email Error] MAILERSEND_API_KEY chưa được set")
+        return
     try:
-        httpx.post(
+        r = httpx.post(
             "https://api.mailersend.com/v1/email",
             headers={
-                "Authorization": f"Bearer {MAILERSEND_API_KEY}",
+                "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json"
             },
             json={
@@ -29,6 +32,7 @@ def send_email(to: str, subject: str, html: str):
             },
             timeout=10
         )
+        print(f"[Email] status={r.status_code} body={r.text}")
     except Exception as e:
         print(f"[Email Error] {e}")
 
