@@ -15,6 +15,8 @@ FRONTEND_URL = os.getenv("FRONTEND_URL", "https://batchguard-web.vercel.app")
 
 
 def send_email(to: str, subject: str, html: str):
+    pwd = os.getenv("GMAIL_APP_PASSWORD", "")
+    print(f"[Email] to={to} pwd_len={len(pwd)}")
     try:
         msg = MIMEMultipart("alternative")
         msg["Subject"] = subject
@@ -23,7 +25,7 @@ def send_email(to: str, subject: str, html: str):
         msg.attach(MIMEText(html, "html"))
         with smtplib.SMTP("smtp.gmail.com", 587) as server:
             server.starttls()
-            server.login("karlpro812005@gmail.com", os.getenv("GMAIL_APP_PASSWORD", ""))
+            server.login("karlpro812005@gmail.com", pwd)
             server.sendmail("karlpro812005@gmail.com", to, msg.as_string())
         print(f"[Email] Sent to {to}")
     except Exception as e:
