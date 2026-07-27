@@ -14,12 +14,15 @@ FRONTEND_URL = os.getenv("FRONTEND_URL", "https://batchguard-web.vercel.app")
 
 
 def send_email(to: str, subject: str, html: str):
-    resend.Emails.send({
-        "from": "MyLongAI <onboarding@resend.dev>",
-        "to": to,
-        "subject": subject,
-        "html": html
-    })
+    try:
+        resend.Emails.send({
+            "from": "MyLongAI <onboarding@resend.dev>",
+            "to": to,
+            "subject": subject,
+            "html": html
+        })
+    except Exception as e:
+        print(f"[Email Error] {e}")
 
 
 class ForgotRequest(BaseModel):
