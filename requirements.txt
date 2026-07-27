@@ -6,7 +6,6 @@ pydantic-settings
 python-multipart
 httpx
 sqlalchemy
-pymysql
 cryptography
 psycopg2-binary
 python-jose[cryptography]
@@ -14,4 +13,3 @@ passlib[bcrypt]
 bcrypt==4.0.1
 gtts
 email-validator
-sib-api-v3-sdk

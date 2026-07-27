@@ -4,28 +4,32 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.services.auth_service import hash_password
-import secrets, os
-import sib_api_v3_sdk
-from sib_api_v3_sdk.rest import ApiException
+import secrets, os, httpx
 from datetime import datetime, timedelta, timezone
 
 router = APIRouter()
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "https://batchguard-web.vercel.app")
+MAILERSEND_API_KEY = os.getenv("MAILERSEND_API_KEY", "")
 
 
 def send_email(to: str, subject: str, html: str):
-    configuration = sib_api_v3_sdk.Configuration()
-    configuration.api_key["api-key"] = os.getenv("BREVO_API_KEY", "")
-    api = sib_api_v3_sdk.TransactionalEmailsApi(sib_api_v3_sdk.ApiClient(configuration))
     try:
-        api.send_transac_email(sib_api_v3_sdk.SendSmtpEmail(
-            sender={"name": "MyLongAI", "email": "karlpro812005@gmail.com"},
-            to=[{"email": to}],
-            subject=subject,
-            html_content=html
-        ))
-    except ApiException as e:
+        httpx.post(
+            "https://api.mailersend.com/v1/email",
+            headers={
+                "Authorization": f"Bearer {MAILERSEND_API_KEY}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "from": {"email": "noreply@trial-3yxj6ljrzxzgdo2r.mlsender.net", "name": "MyLongAI"},
+                "to": [{"email": to}],
+                "subject": subject,
+                "html": html
+            },
+            timeout=10
+        )
+    except Exception as e:
         print(f"[Email Error] {e}")
 
 

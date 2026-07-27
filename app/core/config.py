@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = "https://batchguard-web.vercel.app"
     RESEND_API_KEY: str = ""
     BREVO_API_KEY: str = ""
+    MAILERSEND_API_KEY: str = ""
 
     class Config:
         env_file = ".env"
