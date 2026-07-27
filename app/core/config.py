@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     GMAIL_APP_PASSWORD: str = ""
     FRONTEND_URL: str = "https://batchguard-web.vercel.app"
     RESEND_API_KEY: str = ""
+    BREVO_API_KEY: str = ""
 
     class Config:
         env_file = ".env"
