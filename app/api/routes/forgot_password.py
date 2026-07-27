@@ -25,7 +25,7 @@ def send_email(to: str, subject: str, html: str):
                 "Content-Type": "application/json"
             },
             json={
-                "from": {"email": "noreply@trial-3yxj6ljrzxzgdo2r.mlsender.net", "name": "MyLongAI"},
+                "from": {"email": "noreply@test-y7zpl98z3p545vx6.mlsender.net", "name": "MyLongAI"},
                 "to": [{"email": to}],
                 "subject": subject,
                 "html": html
