@@ -16,7 +16,7 @@ class RegisterRequest(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    email: EmailStr
+    email: str  # có thể là email hoặc số điện thoại
     password: str
 
 
@@ -41,8 +41,8 @@ def register(body: RegisterRequest, db: Session = Depends(get_db)):
 @router.post("/login")
 def login(body: LoginRequest, db: Session = Depends(get_db)):
     user = db.execute(
-        text("SELECT id, email, password_hash, full_name, role, premium_expired_at FROM public.users WHERE email = :email"),
-        {"email": body.email}
+        text("SELECT id, email, password_hash, full_name, role, premium_expired_at FROM public.users WHERE email = :login OR phone = :login"),
+        {"login": body.email}
     ).fetchone()
     if not user or not verify_password(body.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Email hoặc mật khẩu không đúng")
