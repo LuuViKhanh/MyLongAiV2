@@ -4,9 +4,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.services.auth_service import hash_password
-import secrets, os, smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import secrets, os, httpx
 from datetime import datetime, timedelta, timezone
 
 router = APIRouter()
@@ -15,19 +13,26 @@ FRONTEND_URL = os.getenv("FRONTEND_URL", "https://batchguard-web.vercel.app")
 
 
 def send_email(to: str, subject: str, html: str):
-    pwd = os.getenv("GMAIL_APP_PASSWORD", "")
-    print(f"[Email] to={to} pwd_len={len(pwd)}")
+    api_key = os.getenv("MAILERSEND_API_KEY", "")
+    if not api_key:
+        print("[Email Error] MAILERSEND_API_KEY chưa được set")
+        return
     try:
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = subject
-        msg["From"] = "karlpro812005@gmail.com"
-        msg["To"] = to
-        msg.attach(MIMEText(html, "html"))
-        with smtplib.SMTP("smtp.gmail.com", 587) as server:
-            server.starttls()
-            server.login("karlpro812005@gmail.com", pwd)
-            server.sendmail("karlpro812005@gmail.com", to, msg.as_string())
-        print(f"[Email] Sent to {to}")
+        r = httpx.post(
+            "https://api.mailersend.com/v1/email",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "from": {"email": "noreply@test-y7zpl98z3p545vx6.mlsender.net", "name": "MyLongAI"},
+                "to": [{"email": to}],
+                "subject": subject,
+                "html": html
+            },
+            timeout=10
+        )
+        print(f"[Email] status={r.status_code} to={to}")
     except Exception as e:
         print(f"[Email Error] {e}")
 

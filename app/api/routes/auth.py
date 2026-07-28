@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, EmailStr
+from typing import Optional
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from app.core.db import get_db
@@ -13,10 +14,11 @@ class RegisterRequest(BaseModel):
     name: str
     email: EmailStr
     password: str
+    phone: Optional[str] = None
 
 
 class LoginRequest(BaseModel):
-    email: EmailStr
+    login: str  # email hoặc số điện thoại
     password: str
 
 
@@ -29,10 +31,18 @@ def register(body: RegisterRequest, db: Session = Depends(get_db)):
     if existing:
         raise HTTPException(status_code=400, detail="Email đã được đăng ký")
 
+    if body.phone:
+        existing_phone = db.execute(
+            text("SELECT id FROM public.users WHERE phone = :phone"),
+            {"phone": body.phone}
+        ).fetchone()
+        if existing_phone:
+            raise HTTPException(status_code=400, detail="Số điện thoại đã được đăng ký")
+
     user_id = str(uuid.uuid4())
     db.execute(
-        text("INSERT INTO public.users (id, full_name, email, password_hash, role) VALUES (:id, :full_name, :email, :password_hash, 'customer')"),
-        {"id": user_id, "full_name": body.name, "email": body.email, "password_hash": hash_password(body.password)}
+        text("INSERT INTO public.users (id, full_name, email, phone, password_hash, role) VALUES (:id, :full_name, :email, :phone, :password_hash, 'customer')"),
+        {"id": user_id, "full_name": body.name, "email": body.email, "phone": body.phone, "password_hash": hash_password(body.password)}
     )
     db.commit()
     return {"success": True, "user_id": user_id}
@@ -40,12 +50,13 @@ def register(body: RegisterRequest, db: Session = Depends(get_db)):
 
 @router.post("/login")
 def login(body: LoginRequest, db: Session = Depends(get_db)):
+    # Tìm user theo email hoặc số điện thoại
     user = db.execute(
-        text("SELECT id, email, password_hash, full_name, role, premium_expired_at FROM public.users WHERE email = :email"),
-        {"email": body.email}
+        text("SELECT id, email, password_hash, full_name, role, premium_expired_at FROM public.users WHERE email = :login OR phone = :login"),
+        {"login": body.login}
     ).fetchone()
     if not user or not verify_password(body.password, user.password_hash):
-        raise HTTPException(status_code=401, detail="Email hoặc mật khẩu không đúng")
+        raise HTTPException(status_code=401, detail="Thông tin đăng nhập không đúng")
 
     # Kiểm tra hết hạn Premium
     role = user.role
