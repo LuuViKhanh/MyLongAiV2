@@ -180,6 +180,7 @@ async def get_weather_analysis(lat: float, lon: float) -> dict:
     weather_source = "open_meteo"
     if meteo_data is None:
         weather_source = "sensor_fallback"
+        print("[Weather] Open-Meteo không khả dụng, fallback sang sensor IoT")
         meteo_data = {
             "current": {
                 "temperature_2m": sensor_data["temperature_c"],
