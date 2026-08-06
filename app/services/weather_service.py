@@ -8,7 +8,7 @@ OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
 SENSOR_API_URL = "https://mylongai-backend-sensors.onrender.com/sensor/latest"
 
 _meteo_cache: dict = {}  # key: (lat, lon) -> {"data": ..., "expires": datetime}
-CACHE_TTL_MINUTES = 10
+CACHE_TTL_MINUTES = 30
 
 # ==============================
 # SENSOR DATA (thật + fallback mock)
@@ -78,12 +78,13 @@ async def fetch_open_meteo(lat: float, lon: float) -> dict:
         if e.response.status_code == 429:
             if cached:
                 return cached["data"]
-            raise HTTPException(status_code=503, detail="Open-Meteo tạm thời giới hạn. Vui lòng thử lại sau vài phút.")
+            # Trả dữ liệu mặc định khi bị rate limit và không có cache
+            return {"current": {}, "hourly": {"precipitation_probability": [0]}}
         raise
     except (httpx.ConnectError, httpx.TimeoutException, httpx.RequestError):
         if cached:
             return cached["data"]
-        raise HTTPException(status_code=503, detail="Không thể kết nối Open-Meteo API. Vui lòng thử lại sau.")
+        return {"current": {}, "hourly": {"precipitation_probability": [0]}}
 
 
 # ==============================
