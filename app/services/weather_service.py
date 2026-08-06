@@ -98,10 +98,10 @@ def predict_rain(meteo: dict, sensor: dict) -> dict:
     max_precip_prob = max(precip_probs) if precip_probs else 0
 
     # Dữ liệu hiện tại từ Open-Meteo
-    current_precip = current.get("precipitation", 0)
-    weather_code = current.get("weather_code", 0)
-    api_humidity = current.get("relative_humidity_2m", 0)
-    api_wind_speed = current.get("wind_speed_10m", 0)
+    current_precip = current.get("precipitation") or 0
+    weather_code = current.get("weather_code") or 0
+    api_humidity = current.get("relative_humidity_2m") or 0
+    api_wind_speed = current.get("wind_speed_10m") or 0
     # Kết hợp với sensor
     sensor_humidity = sensor["humidity_percent"]
 
