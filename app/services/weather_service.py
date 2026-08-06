@@ -78,13 +78,12 @@ async def fetch_open_meteo(lat: float, lon: float) -> dict:
         if e.response.status_code == 429:
             if cached:
                 return cached["data"]
-            # Trả dữ liệu mặc định khi bị rate limit và không có cache
-            return {"current": {}, "hourly": {"precipitation_probability": [0]}}
+            return None
         raise
     except (httpx.ConnectError, httpx.TimeoutException, httpx.RequestError):
         if cached:
             return cached["data"]
-        return {"current": {}, "hourly": {"precipitation_probability": [0]}}
+        return None
 
 
 # ==============================
@@ -176,9 +175,23 @@ async def get_weather_analysis(lat: float, lon: float) -> dict:
         fetch_open_meteo(lat, lon),
         get_sensor_data()
     )
+
+    # Fallback: dùng sensor data khi không lấy được Open-Meteo
+    if meteo_data is None:
+        meteo_data = {
+            "current": {
+                "temperature_2m": sensor_data["temperature_c"],
+                "relative_humidity_2m": sensor_data["humidity_percent"],
+                "surface_pressure": None,
+                "wind_speed_10m": None,
+                "precipitation": 0,
+                "weather_code": 0
+            },
+            "hourly": {"precipitation_probability": [0]}
+        }
+
     prediction = predict_rain(meteo_data, sensor_data)
     advice = generate_advice(prediction, sensor_data)
-
     current = meteo_data.get("current", {})
 
     return {
