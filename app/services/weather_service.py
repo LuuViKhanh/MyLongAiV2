@@ -78,17 +78,11 @@ async def fetch_open_meteo(lat: float, lon: float) -> dict:
         if e.response.status_code == 429:
             if cached:
                 return cached["data"]
-            await asyncio.sleep(5)
-            async with httpx.AsyncClient(timeout=10) as client:
-                resp = await client.get(OPEN_METEO_URL, params=params)
-                resp.raise_for_status()
-                data = resp.json()
-            _meteo_cache[key] = {"data": data, "expires": datetime.now() + timedelta(minutes=CACHE_TTL_MINUTES)}
-            return data
+            raise HTTPException(status_code=503, detail="Open-Meteo tạm thời giới hạn. Vui lòng thử lại sau vài phút.")
         raise
     except (httpx.ConnectError, httpx.TimeoutException, httpx.RequestError):
         if cached:
-            return cached["data"]  # dùng cache cũ dù hết hạn
+            return cached["data"]
         raise HTTPException(status_code=503, detail="Không thể kết nối Open-Meteo API. Vui lòng thử lại sau.")
 
 
