@@ -177,7 +177,9 @@ async def get_weather_analysis(lat: float, lon: float) -> dict:
     )
 
     # Fallback: dùng sensor data khi không lấy được Open-Meteo
+    weather_source = "open_meteo"
     if meteo_data is None:
+        weather_source = "sensor_fallback"
         meteo_data = {
             "current": {
                 "temperature_2m": sensor_data["temperature_c"],
@@ -207,5 +209,6 @@ async def get_weather_analysis(lat: float, lon: float) -> dict:
         },
         "sensor_data": sensor_data,
         "prediction": prediction,
-        "advice": advice
+        "advice": advice,
+        "weather_source": weather_source  # open_meteo | sensor_fallback
     }
